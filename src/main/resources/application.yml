@@ -1,0 +1,21 @@
+server:
+  port: 8084
+
+spring:
+  main:
+    web-application-type: reactive
+  application:
+    name: myce-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: notification
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/notifications,/api/notifications/**
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionRouteLocator: DEBUG
+    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: DEBUG
