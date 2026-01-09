@@ -1,0 +1,25 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: myce-api-gateway
+  data:
+    redis:
+      url:
+      repositories:
+        enabled: false
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - name: JwtAuthenticationFilter
+          routes:
+            - id: core-service
+              uri: http://localhost:8080/
+              predicates:
+                - Path=/**
+
+jwt:
+  secret:

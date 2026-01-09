@@ -1,0 +1,169 @@
+package com.myce.apigateway.filter;
+
+import com.myce.apigateway.config.SecurityEndpoints;
+import com.myce.apigateway.filter.dto.InternalHeaderKey;
+import com.myce.apigateway.filter.dto.InternalUser;
+import com.myce.apigateway.repository.TokenBlackListRepository;
+import com.myce.apigateway.util.JsonUtil;
+import com.myce.apigateway.util.JwtUtil;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jws;
+import java.util.Arrays;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+@Component
+public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAuthenticationFilter.Config> {
+
+    private static final String INVALID_TOKEN_CODE = "INVALID_TOKEN";
+    private static final String EXPIRED_TOKEN_CODE = "EXPIRED_TOKEN";
+
+    private final JwtUtil jwtUtil;
+    private final TokenBlackListRepository tokenBlackListRepository;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, TokenBlackListRepository tokenBlackListRepository) {
+        super(Config.class);
+        this.jwtUtil = jwtUtil;
+        this.tokenBlackListRepository = tokenBlackListRepository;
+    }
+
+    public static class Config { }
+
+    @Override
+    public GatewayFilter apply(Config config) {
+        return (ServerWebExchange exchange, GatewayFilterChain chain) -> {
+            ServerHttpRequest request = exchange.getRequest();
+            ServerHttpResponse response = exchange.getResponse();
+
+            String uri = request.getURI().getPath();
+            String method = request.getMethod().name();
+            // jwt 존재 여부 및 유효성 검사
+            if (isPermitAll(method, uri)) {
+                return chain.filter(exchange);
+            }
+
+            HttpHeaders headers = request.getHeaders();
+            String token = headers.getFirst(JwtUtil.AUTHORIZATION_HEADER);
+            log.debug("[JwtAuthenticationFilter] Input uri={}, method={}", uri, method);
+
+
+            if (token == null || token.isEmpty()) {
+                return getInvalidTokenCodeError(response);
+            }
+
+            // 토큰만 추출
+            String accessToken = jwtUtil.substringToken(token);
+
+            // 토큰 검증
+            Jws<Claims> claims;
+            try {
+                claims = jwtUtil.getClaims(accessToken);
+                if (claims == null) return getInvalidTokenCodeError(response);
+                if (jwtUtil.isExpired(claims)) return getExpiredTokenError(response);
+            } catch (ExpiredJwtException e) {
+                log.info("Expire Token. uri={}, method={}", uri, method);
+                return getExpiredTokenError(response);
+            }
+
+            return tokenBlackListRepository.containsByAccessToken(accessToken)
+                    .flatMap(exists -> {
+                        if (exists) return getInvalidTokenCodeError(response);
+
+                        String role = jwtUtil.getRoleFromToken(claims);
+                        String loginType = jwtUtil.getLoginTypeFromToken(claims);
+                        Long memberId = jwtUtil.getMemberIdFromToken(claims);
+
+                        if (role == null || loginType == null || memberId == null) {
+                            log.info("Not exist user info. role={}, loginType={}, memberId={}", role, loginType, memberId);
+                            return getInvalidTokenCodeError(response);
+                        }
+
+                        InternalUser internalUser = new InternalUser(role, loginType, memberId);
+                        ServerHttpRequest mutatedRequest = buildSecuredRequest(request, internalUser);
+                        ServerWebExchange mutatedExchange =
+                                exchange.mutate().request(mutatedRequest).build();
+
+                        return chain.filter(mutatedExchange);
+                    });
+        };
+    }
+
+    private ServerHttpRequest buildSecuredRequest(
+            ServerHttpRequest request,
+            InternalUser internalUser
+    ) {
+        return request.mutate()
+                .headers(headers -> {
+                    headers.headerSet().removeIf(
+                            h -> h.getKey().startsWith(InternalHeaderKey.INTERNAL_HEADER_PREFIX)
+                                    || h.getKey().equalsIgnoreCase(HttpHeaders.AUTHORIZATION)
+                    );
+
+                    headers.add(InternalHeaderKey.INTERNAL_ROLE, internalUser.role());
+                    headers.add(InternalHeaderKey.INTERNAL_LOGIN_TYPE, internalUser.loginType());
+                    headers.add(InternalHeaderKey.INTERNAL_MEMBER_ID, String.valueOf(internalUser.memberId()));
+                })
+                .build();
+    }
+
+    private Mono<Void> getInvalidTokenCodeError(ServerHttpResponse response) {
+        return setErrorResponse(response, INVALID_TOKEN_CODE);
+    }
+
+    private Mono<Void> getExpiredTokenError(ServerHttpResponse response) {
+        return setErrorResponse(response, EXPIRED_TOKEN_CODE);
+    }
+
+    private Mono<Void> setErrorResponse(ServerHttpResponse response, String code) {
+        if (response.isCommitted()) {
+            return Mono.empty();
+        }
+
+        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.getHeaders().set(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8");
+
+        Map<String, String> body = Map.of("code", code);
+        byte[] bytes = JsonUtil.convertToBytes(body);
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        return response.writeWith(Mono.just(buffer));
+    }
+
+    private boolean isPermitAll(String method, String path) {
+        if(isExist(SecurityEndpoints.ETC_PERMIT_ALL, path)) return true;
+
+        if(HttpMethod.GET.name().equals(method)) {
+            return isExist(SecurityEndpoints.GET_PERMIT_ALL, path);
+        }
+        if(HttpMethod.POST.name().equals(method)) {
+            return isExist(SecurityEndpoints.POST_PERMIT_ALL, path);
+        }
+        if(HttpMethod.PATCH.name().equals(method)) {
+            return isExist(SecurityEndpoints.PATCH_PERMIT_ALL, path);
+        }
+        if(HttpMethod.DELETE.name().equals(method)) {
+            return isExist(SecurityEndpoints.DELETE_PERMIT_ALL, path);
+        }
+
+        return false;
+    }
+
+    private boolean isExist(String[] patterns, String path) {
+        return Arrays.stream(patterns).anyMatch(p -> pathMatcher.match(p, path));
+    }
+}

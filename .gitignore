@@ -178,21 +178,19 @@ ai-session.md
 .ai-config/
 AI_SETUP_PROGRESS.md
 
-# Gradle
+### Gradle ###
 .gradle/
 build/
-out/
-gradle/
-!gradle/
-!gradle/wrapper/
-!gradle/wrapper/gradle-wrapper.jar
-!gradle/wrapper/gradle-wrapper.properties
-gradle.lockfile
-*.gradle.local
 
-# Gemini files
-GEMINI.md
-.prompt
-.prMessage
+### IntelliJ IDEA ###
+.idea/
+out/
+*.iml
+
+### OS ###
+.DS_Store
+
+### Gradle local ###
+*.gradle.local
 
 /docs
