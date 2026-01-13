@@ -21,7 +21,7 @@ spring:
                 internalAuthValue: ${INTERNAL_AUTH_VALUE}
           routes:
             - id: notification-api
-              uri: http://localhost:8082/
+              uri: http://localhost:8082
               predicates:
                 - Path=/api/notifications/**
 
