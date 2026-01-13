@@ -1,12 +1,14 @@
 server:
-  port: 8083
+  port: 8084
 
 spring:
   application:
     name: myce-api-gateway
+  config:
+    import: optional:file:.env[.properties]
   data:
     redis:
-      url:
+      url: ${REDIS_URL}
       repositories:
         enabled: false
   cloud:
@@ -15,11 +17,18 @@ spring:
         webflux:
           default-filters:
             - name: JwtAuthenticationFilter
+              args:
+                internalAuthValue: ${INTERNAL_AUTH_VALUE}
           routes:
+            - id: notification-api
+              uri: http://localhost:8082/
+              predicates:
+                - Path=/api/notifications/**
+
             - id: core-service
               uri: http://localhost:8080/
               predicates:
                 - Path=/**
 
 jwt:
-  secret:
+  secret: ${JWT_SECRET}

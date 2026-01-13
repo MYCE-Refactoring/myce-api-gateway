@@ -11,6 +11,8 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import java.util.Arrays;
 import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -43,7 +45,11 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
         this.tokenBlackListRepository = tokenBlackListRepository;
     }
 
-    public static class Config { }
+    @Getter
+    @Setter
+    public static class Config {
+        private String internalAuthValue;
+    }
 
     @Override
     public GatewayFilter apply(Config config) {
@@ -53,15 +59,18 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 
             String uri = request.getURI().getPath();
             String method = request.getMethod().name();
-            // jwt 존재 여부 및 유효성 검사
-            if (isPermitAll(method, uri)) {
-                return chain.filter(exchange);
-            }
 
             HttpHeaders headers = request.getHeaders();
             String token = headers.getFirst(JwtUtil.AUTHORIZATION_HEADER);
             log.debug("[JwtAuthenticationFilter] Input uri={}, method={}", uri, method);
 
+            // jwt 존재 여부 및 유효성 검사
+            if (isPermitAll(method, uri) && (token == null || token.isEmpty())) {
+                ServerHttpRequest mutatedRequest = buildSecuredRequest(request, config.internalAuthValue);
+                ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
+
+                return chain.filter(mutatedExchange);
+            }
 
             if (token == null || token.isEmpty()) {
                 return getInvalidTokenCodeError(response);
@@ -95,7 +104,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                         }
 
                         InternalUser internalUser = new InternalUser(role, loginType, memberId);
-                        ServerHttpRequest mutatedRequest = buildSecuredRequest(request, internalUser);
+                        ServerHttpRequest mutatedRequest = buildSecuredRequest(request, internalUser, config.internalAuthValue);
                         ServerWebExchange mutatedExchange =
                                 exchange.mutate().request(mutatedRequest).build();
 
@@ -106,7 +115,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 
     private ServerHttpRequest buildSecuredRequest(
             ServerHttpRequest request,
-            InternalUser internalUser
+            InternalUser internalUser,
+            String internalAuthValue
     ) {
         return request.mutate()
                 .headers(headers -> {
@@ -115,9 +125,23 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                                     || h.getKey().equalsIgnoreCase(HttpHeaders.AUTHORIZATION)
                     );
 
+                    headers.add(InternalHeaderKey.INTERNAL_AUTH, internalAuthValue);
                     headers.add(InternalHeaderKey.INTERNAL_ROLE, internalUser.role());
                     headers.add(InternalHeaderKey.INTERNAL_LOGIN_TYPE, internalUser.loginType());
                     headers.add(InternalHeaderKey.INTERNAL_MEMBER_ID, String.valueOf(internalUser.memberId()));
+                })
+                .build();
+    }
+
+    private ServerHttpRequest buildSecuredRequest(ServerHttpRequest request, String internalAuthValue) {
+        return request.mutate()
+                .headers(headers -> {
+                    headers.headerSet().removeIf(
+                            h -> h.getKey().startsWith(InternalHeaderKey.INTERNAL_HEADER_PREFIX)
+                                    || h.getKey().equalsIgnoreCase(HttpHeaders.AUTHORIZATION)
+                    );
+
+                    headers.add(InternalHeaderKey.INTERNAL_AUTH, internalAuthValue);
                 })
                 .build();
     }
