@@ -1,5 +1,5 @@
 server:
-  port: 8084
+  port: 8083
 
 spring:
   application:
@@ -21,7 +21,7 @@ spring:
                 internalAuthValue: ${INTERNAL_AUTH_VALUE}
           routes:
             - id: notification-api
-              uri: http://localhost:8082
+              uri: http://localhost:8011
               predicates:
                 - Path=/api/notifications/**
 
