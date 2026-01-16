@@ -1,5 +1,5 @@
 server:
-  port: 8084
+  port: 8083
 
 spring:
   application:
@@ -16,6 +16,10 @@ spring:
       server:
         webflux:
           default-filters:
+            - name: LoggingFilter
+              args:
+                preLogger: true
+                postLogger: true
             - name: JwtAuthenticationFilter
               args:
                 internalAuthValue: ${INTERNAL_AUTH_VALUE}
@@ -25,10 +29,16 @@ spring:
               predicates:
                 - Path=/api/notifications/**
 
+            - id: chat
+              uri: http://localhost:8031/
+              predicates:
+                - Path=/api/chats/**
+
             - id: core-service
               uri: http://localhost:8081/
               predicates:
                 - Path=/**
+
 
 jwt:
   secret: ${JWT_SECRET}
