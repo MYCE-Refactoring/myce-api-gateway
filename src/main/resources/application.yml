@@ -16,6 +16,7 @@ spring:
       server:
         webflux:
           default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
             - name: LoggingFilter
               args:
                 preLogger: true
@@ -32,7 +33,7 @@ spring:
             - id: chat
               uri: http://localhost:8031/
               predicates:
-                - Path=/api/chats/**
+                - Path=/api/chats/**, /ws/**
 
             - id: core-service
               uri: http://localhost:8081/
