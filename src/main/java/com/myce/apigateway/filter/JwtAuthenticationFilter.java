@@ -35,6 +35,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
     private static final String INVALID_TOKEN_CODE = "INVALID_TOKEN";
     private static final String EXPIRED_TOKEN_CODE = "EXPIRED_TOKEN";
 
+    private static final String LOGOUT_URI = "/api/auth/logout";
+
     private final JwtUtil jwtUtil;
     private final TokenBlackListRepository tokenBlackListRepository;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -104,7 +106,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                         }
 
                         InternalUser internalUser = new InternalUser(role, loginType, memberId);
-                        ServerHttpRequest mutatedRequest = buildSecuredRequest(request, internalUser, config.internalAuthValue);
+                        ServerHttpRequest mutatedRequest = buildSecuredRequest
+                                (request, internalUser, config.internalAuthValue, accessToken);
                         ServerWebExchange mutatedExchange =
                                 exchange.mutate().request(mutatedRequest).build();
 
@@ -116,7 +119,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
     private ServerHttpRequest buildSecuredRequest(
             ServerHttpRequest request,
             InternalUser internalUser,
-            String internalAuthValue
+            String internalAuthValue,
+            String token
     ) {
         return request.mutate()
                 .headers(headers -> {
@@ -129,6 +133,10 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                     headers.add(InternalHeaderKey.INTERNAL_ROLE, internalUser.role());
                     headers.add(InternalHeaderKey.INTERNAL_LOGIN_TYPE, internalUser.loginType());
                     headers.add(InternalHeaderKey.INTERNAL_MEMBER_ID, String.valueOf(internalUser.memberId()));
+
+                    if (request.getURI().getPath().equals(LOGOUT_URI)) {
+                        headers.add(InternalHeaderKey.INTERNAL_ACCESS_TOKEN, token);
+                    }
                 })
                 .build();
     }
