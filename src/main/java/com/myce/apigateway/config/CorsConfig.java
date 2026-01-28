@@ -21,8 +21,7 @@ public class CorsConfig {
                 "https://media.myce.live",
                 "http://localhost:3000",
                 "http://localhost:5173",
-                "http://localhost:8080",
-                "http://localhost:8081",
+                "http://localhost:8083",
                 "https://api.myce.live"
         ));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
