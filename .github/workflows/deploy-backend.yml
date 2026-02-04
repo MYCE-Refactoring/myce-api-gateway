@@ -26,8 +26,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build api module with gradle
-        run: ../gradlew clean build -x test
-        working-directory: api
+        run: ./gradlew clean build -x test
 
       - name: Login to Docker
         uses: docker/login-action@v1
@@ -39,7 +38,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./api/Dockerfile
+          file: ./Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.app-name }}:latest
