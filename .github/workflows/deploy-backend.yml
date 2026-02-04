@@ -1,0 +1,55 @@
+name: Deploy Core api Module to EC2
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  app-name: myce-api-gateway
+  app-port: 8083
+  deploy-host: public
+
+jobs:
+  build-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v5.0.0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build api module with gradle
+        run: ../gradlew clean build -x test
+        working-directory: api
+
+      - name: Login to Docker
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+      - name: Build and Push api module Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./api/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.app-name }}:latest
+
+      - name: Trigger deploy ansible
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          gh api -X POST /repos/MYCE-Refactoring/myce-infra/dispatches \
+            -f event_type='deploy-myce-core' \
+            -f client_payload[service]=${{ env.app-name }} \
+            -f client_payload[port]=${{ env.app-port }} \
+            -f client_payload[deploy-host]=${{ env.deploy-host }}
