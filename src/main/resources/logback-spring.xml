@@ -1,0 +1,41 @@
+<configuration>
+  <property name="APP_NAME" value="gateway-api"/>
+  <property name="LOG_PATH" value="./app/logs"/>
+  <property name="LOG_FILE" value="${LOG_PATH}/application.log"/>
+  <appender name="FILE"
+    class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${LOG_FILE}</file>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+      <!--
+        %d : 날짜 기준
+        %i : 같은 날짜 내에서 파일 인덱스
+      -->
+      <fileNamePattern>
+        ${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.%i.log
+      </fileNamePattern>
+
+      <!-- 파일 하나당 최대 크기 -->
+      <maxFileSize>50MB</maxFileSize>
+
+      <!-- 로그 보관 기간 -->
+      <maxHistory>7</maxHistory>
+
+      <!-- 전체 로그 용량 제한 -->
+      <totalSizeCap>5GB</totalSizeCap>
+
+    </rollingPolicy>
+
+    <encoder>
+      <pattern>
+        %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n
+      </pattern>
+    </encoder>
+
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="FILE"/>
+  </root>
+
+</configuration>
