@@ -1,5 +1,6 @@
 package com.myce.apigateway.filter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.myce.apigateway.config.SecurityEndpoints;
 import com.myce.apigateway.filter.dto.InternalHeaderKey;
 import com.myce.apigateway.filter.dto.InternalUser;
@@ -124,7 +125,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
     ) {
         return request.mutate()
                 .headers(headers -> {
-                    headers.headerSet().removeIf(
+                    headers.entrySet().removeIf(
                             h -> h.getKey().startsWith(InternalHeaderKey.INTERNAL_HEADER_PREFIX)
                                     || h.getKey().equalsIgnoreCase(HttpHeaders.AUTHORIZATION)
                     );
@@ -144,7 +145,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
     private ServerHttpRequest buildSecuredRequest(ServerHttpRequest request, String internalAuthValue) {
         return request.mutate()
                 .headers(headers -> {
-                    headers.headerSet().removeIf(
+                    headers.entrySet().removeIf(
                             h -> h.getKey().startsWith(InternalHeaderKey.INTERNAL_HEADER_PREFIX)
                                     || h.getKey().equalsIgnoreCase(HttpHeaders.AUTHORIZATION)
                     );
@@ -171,7 +172,12 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
         response.getHeaders().set(HttpHeaders.CONTENT_TYPE, "application/json;charset=UTF-8");
 
         Map<String, String> body = Map.of("code", code);
-        byte[] bytes = JsonUtil.convertToBytes(body);
+        byte[] bytes = null;
+        try {
+            bytes = JsonUtil.convertToBytes(body);
+        } catch (JsonProcessingException e) {
+            log.error("Fail to convert to byte. body={}", body, e);
+        }
         DataBuffer buffer = response.bufferFactory().wrap(bytes);
         return response.writeWith(Mono.just(buffer));
     }
