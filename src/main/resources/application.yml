@@ -15,32 +15,30 @@ spring:
         enabled: false
   cloud:
     gateway:
-      server:
-        webflux:
-          default-filters:
-            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
-            - name: LoggingFilter
-              args:
-                preLogger: true
-                postLogger: true
-            - name: JwtAuthenticationFilter
-              args:
-                internalAuthValue: ${GATEWAY_AUTH_VALUE}
-          routes:
-            - id: notification-api
-              uri: lb://NOTIFICATION-API
-              predicates:
-                - Path=/api/notifications/**
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+        - name: LoggingFilter
+          args:
+            preLogger: true
+            postLogger: true
+        - name: JwtAuthenticationFilter
+          args:
+            internalAuthValue: ${GATEWAY_AUTH_VALUE}
+      routes:
+        - id: notification-api
+          uri: lb://NOTIFICATION-API
+          predicates:
+            - Path=/api/notifications/**
 
-            - id: chat-api
-              uri: lb://CHAT-API
-              predicates:
-                - Path=/api/chats/**, /ws/**
+        - id: chat-api
+          uri: lb://CHAT-API
+          predicates:
+            - Path=/api/chats/**, /ws/**
 
-            - id: core-service
-              uri: lb://CORE-API
-              predicates:
-                - Path=/**
+        - id: core-service
+          uri: lb://CORE-API
+          predicates:
+            - Path=/**
 
 eureka:
   client:
