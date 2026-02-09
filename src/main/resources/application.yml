@@ -23,23 +23,41 @@ spring:
                 postLogger: true
             - name: JwtAuthenticationFilter
               args:
-                internalAuthValue: ${INTERNAL_AUTH_VALUE}
+                internalAuthValue: ${GATEWAY_AUTH_VALUE}
           routes:
             - id: notification-api
-              uri: http://localhost:8011
+              uri: lb://NOTIFICATION-API
               predicates:
                 - Path=/api/notifications/**
 
-            - id: chat
-              uri: http://localhost:8031/
+            - id: chat-api
+              uri: lb://CHAT-API
               predicates:
                 - Path=/api/chats/**, /ws/**
 
             - id: core-service
-              uri: http://localhost:8081/
+              uri: lb://CORE-API
               predicates:
                 - Path=/**
 
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_URL}
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  prometheus:
+    metrics:
+      export:
+        enabled: true
 
 jwt:
   secret: ${JWT_SECRET}
