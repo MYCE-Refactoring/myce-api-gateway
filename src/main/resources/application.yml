@@ -5,7 +5,9 @@ spring:
   application:
     name: myce-api-gateway
   config:
-    import: optional:file:.env[.properties]
+    import:
+      - optional:aws-parameterstore:/myce/common/
+      - optional:aws-parameterstore:/myce/${spring.profiles.active}/
   data:
     redis:
       url: ${REDIS_URL}
