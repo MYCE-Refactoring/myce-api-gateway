@@ -1,6 +1,6 @@
 <configuration>
   <property name="APP_NAME" value="gateway-api"/>
-  <property name="LOG_PATH" value="./app/logs"/>
+  <property name="LOG_PATH" value="/app/logs"/>
   <property name="LOG_FILE" value="${LOG_PATH}/application.log"/>
   <appender name="FILE"
     class="ch.qos.logback.core.rolling.RollingFileAppender">
