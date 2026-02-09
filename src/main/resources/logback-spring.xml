@@ -44,6 +44,11 @@
 
     <logger name="com.myce" level="DEBUG"/>
 
+    <logger name="com.netflix.discovery" level="DEBUG"/>
+    <logger name="org.springframework.cloud.netflix.eureka" level="DEBUG"/>
+
+    <logger name="org.springframework.cloud.gateway" level="DEBUG"/>
+
     <root level="INFO">
       <appender-ref ref="FILE"/>
     </root>
