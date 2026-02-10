@@ -13,6 +13,7 @@ public final class SecurityEndpoints {
             "/api/reservations/**",
             "/api/reservers",
             "/api/reservations/pre-reservation",
+            "/api/payment/**",
             "/api/payment/imp-uid",
     };
 
@@ -21,9 +22,11 @@ public final class SecurityEndpoints {
             "/api/ads",
             "/api/auth/**",
             "/api/categories",
+            "/api/expos",
             "/api/expos/*/congestion",
             "/api/expos/*/tickets/reservations",
             "/api/expos/*/basic",
+            "/api/expos/*/bookmark",
             "/api/expos/*/reviews",
             "/api/expos/*/location",
             "/api/expos/*/booths/public",
