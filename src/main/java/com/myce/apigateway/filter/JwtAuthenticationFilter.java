@@ -72,10 +72,12 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                 ServerHttpRequest mutatedRequest = buildSecuredRequest(request, config.internalAuthValue);
                 ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
 
+                log.debug("[JwtAuthenticationFilter] Permit all uri. uri={}, method={}", uri, method);
                 return chain.filter(mutatedExchange);
             }
 
             if (token == null || token.isEmpty()) {
+                log.debug("[JwtAuthenticationFilter] Not exist token. uri={}, method={}", uri, method);
                 return getInvalidTokenCodeError(response);
             }
 
