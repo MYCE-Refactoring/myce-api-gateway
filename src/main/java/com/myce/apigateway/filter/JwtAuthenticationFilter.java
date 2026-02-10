@@ -66,6 +66,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
             HttpHeaders headers = request.getHeaders();
             String token = headers.getFirst(JwtUtil.AUTHORIZATION_HEADER);
             log.debug("[JwtAuthenticationFilter] Input uri={}, method={}", uri, method);
+            log.info("uri={}, Authorization={}", uri, token);
+
 
             // jwt 존재 여부 및 유효성 검사
             if (isPermitAll(method, uri) && (token == null || token.isEmpty())) {
