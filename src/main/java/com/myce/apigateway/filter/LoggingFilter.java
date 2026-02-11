@@ -27,7 +27,8 @@ public class LoggingFilter extends AbstractGatewayFilterFactory<LoggingFilter.Co
             URI uri = request.getURI();
 
             if (config.isPreLogger()) {
-                log.info("[Request] method={}, uri={} ", method, uri);
+                String origin = request.getHeaders().getFirst("Origin");
+                log.info("[Request] method={}, uri={}, origin={}", method, uri, origin);
             }
 
             return chain.filter(exchange).then(Mono.fromRunnable(() -> {
