@@ -15,6 +15,7 @@ public final class SecurityEndpoints {
             "/api/reservations/pre-reservation",
             "/api/payment/**",
             "/api/payment/imp-uid",
+            "/api/payment/webhook"
     };
 
     // ===== GET 요청 허용 엔드포인트 =====
