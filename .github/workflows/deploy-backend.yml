@@ -3,6 +3,7 @@ name: Deploy Core api Module to EC2
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 env:
   app-name: myce-api-gateway
